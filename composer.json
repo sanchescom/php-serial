@@ -24,8 +24,8 @@
     },
     "scripts": {
         "test": "./vendor/bin/phpunit",
-        "lint": "./vendor/bin/phpcs -p --standard=PSR12 ./src ./tests",
-        "fix": "./vendor/bin/phpcbf --standard=PSR12 ./src ./tests",
+        "lint": "./vendor/bin/phpcs -p --standard=PSR12 ./src ./tests ./examples",
+        "fix": "./vendor/bin/phpcbf --standard=PSR12 ./src ./tests ./examples",
         "analyse": "./vendor/bin/phpstan analyse"
     },
     "config": {
