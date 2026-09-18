@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
+use Sanchescom\Serial\SerialException;
 use Sanchescom\Serial\SerialPort;
 use Sanchescom\Serial\SerialPortLocator;
 use Sanchescom\Serial\TimeoutException;
@@ -17,16 +18,21 @@ if ($device === null) {
     exit(1);
 }
 
-$port = new SerialPort($device, (int) ($argv[2] ?? 115200));
-$port->write("AT\r\n");
-
 try {
-    do {
-        $line = $port->readLine(timeout: 2.0);
-        echo "< {$line}\n";
-    } while ($line !== 'OK' && $line !== 'ERROR');
-} catch (TimeoutException) {
-    echo "No answer within 2 s\n";
-}
+    $port = new SerialPort($device, (int) ($argv[2] ?? 115200));
+    $port->write("AT\r\n");
 
-$port->close();
+    try {
+        do {
+            $line = $port->readLine(timeout: 2.0);
+            echo "< {$line}\n";
+        } while ($line !== 'OK' && $line !== 'ERROR');
+    } catch (TimeoutException) {
+        echo "No answer within 2 s\n";
+    }
+
+    $port->close();
+} catch (SerialException $e) {
+    fwrite(STDERR, $e->getMessage() . "\n");
+    exit(1);
+}
