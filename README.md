@@ -110,8 +110,9 @@ an `\InvalidArgumentException`.
 - If the other end closes the port while `read()`, `readUntil()` or `readLine()` is waiting, it throws
   a `SerialException` rather than returning an empty string or a `TimeoutException`. `readAvailable()`
   does not throw: check `feof($port->stream())` when you need to see that the port is gone.
-- A zero timeout makes `readUntil()` and `readLine()` look at the internal buffer only; they do not
-  poll the device before giving up.
+- A zero timeout polls the device once and never waits: whatever has already arrived is used, and
+  `readUntil()` and `readLine()` throw a `TimeoutException` straight away when the delimiter is not
+  there yet.
 
 ## Finding ports
 

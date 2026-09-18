@@ -129,9 +129,20 @@ final class SerialPortTest extends TestCase
 
     public function testZeroTimeoutReturnsBufferedLineWithoutWaiting(): void
     {
-        $this->feed("x\ny\n");
-        self::assertSame('x', $this->port->readLine(0.5));
-        self::assertSame('y', $this->port->readLine(0.0));
+        $this->feed("x\n");
+        usleep(10_000);
+        self::assertSame('x', $this->port->readLine(0.0));
+    }
+
+    public function testZeroTimeoutThrowsImmediatelyWhenNothingIsAvailable(): void
+    {
+        $start = hrtime(true);
+        try {
+            $this->port->readLine(0.0);
+            self::fail('expected TimeoutException');
+        } catch (TimeoutException) {
+        }
+        self::assertLessThan(0.05, (hrtime(true) - $start) / 1e9);
     }
 
     public function testReadUntilTimesOutWhileBytesKeepArrivingWithoutTheDelimiter(): void

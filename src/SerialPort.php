@@ -148,7 +148,7 @@ final class SerialPort
      * Bytes up to (not including) $delimiter; the delimiter is consumed, later bytes stay buffered.
      *
      * The deadline is checked before every wait, so a stream that keeps delivering bytes without the
-     * delimiter still times out. With a zero timeout only the internal buffer is inspected.
+     * delimiter still times out. A zero timeout polls the device once and never waits.
      *
      * @throws TimeoutException when the delimiter has not arrived within $timeout seconds; partial bytes stay buffered
      * @throws SerialException when the other end has closed the port
@@ -162,6 +162,7 @@ final class SerialPort
 
         $stream = $this->stream();
         $deadline = hrtime(true) + (int) ($timeout * 1e9);
+        $polled = false;
         while (true) {
             $at = strpos($this->pending, $delimiter);
             if ($at !== false) {
@@ -171,10 +172,15 @@ final class SerialPort
                 return $head;
             }
 
+            // The first pass always gets one poll, zero-length when the deadline has already
+            // passed: a zero timeout means "do not wait", not "do not look". Every later pass
+            // throws once the deadline is gone, however much data keeps arriving.
             $remaining = ($deadline - hrtime(true)) / 1e9;
-            if ($remaining <= 0.0 || !$this->wait($stream, forWrite: false, timeout: $remaining)) {
+            $expired = $remaining <= 0.0;
+            if (($expired && $polled) || !$this->wait($stream, forWrite: false, timeout: max(0.0, $remaining))) {
                 throw new TimeoutException(sprintf('No %s received within %.3f s', json_encode($delimiter), $timeout));
             }
+            $polled = true;
             $chunk = (string) fread($stream, 4096);
             if ($chunk === '' && feof($stream)) {
                 throw new SerialException('Port closed by the other end');
