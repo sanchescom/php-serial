@@ -29,6 +29,7 @@ jumpered to GPIO15, full transcript in [`docs/verified-on.md`](docs/verified-on.
 $ php examples/loopback.php /dev/serial0 115200
 Opened /dev/serial0 at 115200
 readLine: 'ping'
+loopback OK: 'ping' went out on TX and came back on RX
 timeout: No "\n" received within 0.500 s
 readAvailable: ''
 [exit 0]
