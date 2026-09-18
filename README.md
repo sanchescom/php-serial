@@ -94,6 +94,8 @@ an `\InvalidArgumentException`.
   delimiter has not arrived in time. Whatever did arrive stays in the internal buffer, so a longer
   retry continues where the previous call stopped instead of losing the partial message.
 - `readAvailable()` never waits and never times out.
+- `write()` takes no timeout: it returns once every byte is gone. If the port accepts nothing at
+  all for one second — flow control asserted, device unplugged — it gives up with a `SerialException`.
 - If the other end closes the port while `readUntil()` is waiting, it throws a `SerialException`
   rather than a `TimeoutException`.
 
@@ -143,7 +145,9 @@ On Windows the port is opened as `\\.\COMn` and configured with
 `mode COMn BAUD=… PARITY=… DATA=… STOP=… xon=… octs=… rts=… dtr=on to=off`.
 
 No PHP extension is required: the library uses plain stream functions plus one external command per
-port.
+port. That command runs through `exec()`, so on a hardened installation where `exec()` is in
+`disable_functions` the constructor throws a `SerialException` saying exec() is disabled instead of
+dying with a fatal error.
 
 ## Upgrading from 2.x
 
