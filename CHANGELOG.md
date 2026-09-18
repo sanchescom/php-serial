@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0 — unreleased
+## 3.0.0 — 2026-09-18
 
 Rewritten from scratch under the MIT License. No code from 2.x remains.
 
