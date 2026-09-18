@@ -183,7 +183,7 @@ final class SerialPort
         }
     }
 
-    /** readUntil($eol) with a trailing "\r" removed, so "OK\r\n" reads as "OK". */
+    /** readUntil($eol) with trailing carriage returns removed, so "OK\r\n" reads as "OK". */
     public function readLine(float $timeout, string $eol = "\n"): string
     {
         return rtrim($this->readUntil($eol, $timeout), "\r");

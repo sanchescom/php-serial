@@ -18,8 +18,12 @@ writing bytes. This is `examples/at-command.php`:
 
 declare(strict_types=1);
 
+// Talk to a modem or an ESP8266 with AT firmware:
+//   php examples/at-command.php /dev/ttyUSB0 115200
+
 require __DIR__ . '/../vendor/autoload.php';
 
+use Sanchescom\Serial\SerialException;
 use Sanchescom\Serial\SerialPort;
 use Sanchescom\Serial\SerialPortLocator;
 use Sanchescom\Serial\TimeoutException;
@@ -30,25 +34,32 @@ if ($device === null) {
     exit(1);
 }
 
-$port = new SerialPort($device, (int) ($argv[2] ?? 115200));
-$port->write("AT\r\n");
-
 try {
-    do {
-        $line = $port->readLine(timeout: 2.0);
-        echo "< {$line}\n";
-    } while ($line !== 'OK' && $line !== 'ERROR');
-} catch (TimeoutException) {
-    echo "No answer within 2 s\n";
-}
+    $port = new SerialPort($device, (int) ($argv[2] ?? 115200));
+    $port->write("AT\r\n");
 
-$port->close();
+    try {
+        do {
+            $line = $port->readLine(timeout: 2.0);
+            echo "< {$line}\n";
+        } while ($line !== 'OK' && $line !== 'ERROR');
+    } catch (TimeoutException) {
+        echo "No answer within 2 s\n";
+    }
+
+    $port->close();
+} catch (SerialException $e) {
+    fwrite(STDERR, $e->getMessage() . "\n");
+    exit(1);
+}
 ```
 
 Named arguments keep a full configuration readable (`Parity`, `StopBits` and `FlowControl` live in
 the same namespace):
 
 ```php
+use Sanchescom\Serial\{FlowControl, Parity, StopBits};
+
 $port = new SerialPort(
     '/dev/ttyUSB0',
     baudRate: 9600,
@@ -62,7 +73,7 @@ $port = new SerialPort(
 The reading methods differ only in when they stop waiting:
 
 - `write(string $bytes): void` — writes everything before returning.
-- `readLine(float $timeout, string $eol = "\n"): string` — one line, a trailing `"\r"` removed, so `"OK\r\n"` reads as `"OK"`.
+- `readLine(float $timeout, string $eol = "\n"): string` — one line, trailing carriage returns removed, so `"OK\r\n"` reads as `"OK"`.
 - `readUntil(string $delimiter, float $timeout): string` — bytes up to the delimiter; the delimiter is consumed and anything after it stays buffered for the next call.
 - `read(int $maxLength, float $timeout): string` — up to `$maxLength` bytes, waiting at most `$timeout` seconds for the first one.
 - `readAvailable(): string` — everything received so far, without waiting.
@@ -73,7 +84,7 @@ The reading methods differ only in when they stop waiting:
 
 | Parameter | Type | Default | Values |
 | --- | --- | --- | --- |
-| `$device` | `string` | — | `/dev/ttyUSB0`, `/dev/cu.usbserial-1410`, `COM3` |
+| `$device` | `string` | — | `/dev/ttyUSB0`, `/dev/cu.usbserial-1410`, `COM3` (also `COM3:` and `\\.\COM3`) |
 | `$baudRate` | `int` | `57600` | any positive integer the driver accepts: 300, 1200, 9600, 19200, 38400, 57600, 115200, … |
 | `$dataBits` | `int` | `8` | `5`, `6`, `7`, `8` |
 | `$parity` | `Parity` | `Parity::None` | `Parity::None`, `Parity::Even`, `Parity::Odd` |
@@ -96,8 +107,11 @@ an `\InvalidArgumentException`.
 - `readAvailable()` never waits and never times out.
 - `write()` takes no timeout: it returns once every byte is gone. If the port accepts nothing at
   all for one second — flow control asserted, device unplugged — it gives up with a `SerialException`.
-- If the other end closes the port while `readUntil()` is waiting, it throws a `SerialException`
-  rather than a `TimeoutException`.
+- If the other end closes the port while `read()`, `readUntil()` or `readLine()` is waiting, it throws
+  a `SerialException` rather than returning an empty string or a `TimeoutException`. `readAvailable()`
+  does not throw: check `feof($port->stream())` when you need to see that the port is gone.
+- A zero timeout makes `readUntil()` and `readLine()` look at the internal buffer only; they do not
+  poll the device before giving up.
 
 ## Finding ports
 
@@ -126,9 +140,9 @@ port you meant.
 
 On Windows PHP cannot `stream_select()` a file handle and non-blocking mode is not implemented for
 one, so `read()`, `readUntil()` and `readLine()` do not enforce their `$timeout` there: `fread()`
-blocks according to the COM port's own timeouts. The timeout argument is still accepted and still
-bounds the loop, but the actual waiting is the driver's. Everything else — opening, configuring, writing, buffering — works the same way on all
-three platforms.
+blocks according to the COM port's own timeouts. `readUntil()` and `readLine()` stop at the deadline
+once `fread()` returns; `read()` blocks inside `fread()` for as long as the driver takes. Everything
+else — opening, configuring, writing, buffering — works the same way on all three platforms.
 
 ## How it works
 
