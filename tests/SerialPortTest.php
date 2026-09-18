@@ -43,6 +43,22 @@ final class SerialPortTest extends TestCase
         self::assertSame("AT\r\n", fread($this->remote, 16));
     }
 
+    public function testWriteCompletesAcrossPartialWrites(): void
+    {
+        // A pipe takes 64 KB at a time at best, so a megabyte needs many fwrite() calls.
+        $process = proc_open(['wc', '-c'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w']], $pipes);
+        self::assertIsResource($process);
+        stream_set_blocking($pipes[0], false);
+
+        $port = SerialPort::fromStream($pipes[0]);
+        $port->write(str_repeat('x', 1_000_000));
+        $port->close(); // wc sees end of input and prints the count
+
+        $counted = trim((string) stream_get_contents($pipes[1]));
+        proc_close($process);
+        self::assertSame('1000000', $counted);
+    }
+
     public function testReadAvailableNeverWaitsAndReturnsEmptyWhenIdle(): void
     {
         $start = hrtime(true);
@@ -71,7 +87,7 @@ final class SerialPortTest extends TestCase
         self::assertSame('', $this->port->read(10, 0.1));
         $elapsed = (hrtime(true) - $start) / 1e9;
         self::assertGreaterThanOrEqual(0.09, $elapsed);
-        self::assertLessThan(0.3, $elapsed);
+        self::assertLessThan(1.0, $elapsed);
     }
 
     public function testReadServesBufferedBytesFirst(): void

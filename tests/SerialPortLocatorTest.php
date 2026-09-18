@@ -47,14 +47,18 @@ final class SerialPortLocatorTest extends TestCase
 
     public function testWindowsParsesTheRegistry(): void
     {
-        $run = static fn (string $command): array => [0, [
-            '',
-            'HKEY_LOCAL_MACHINE\HARDWARE\DEVICEMAP\SERIALCOMM',
-            '    \Device\Serial0    REG_SZ    COM1',
-            '    \Device\USBSER000    REG_SZ    COM7',
-            '    \Device\Silabser0    REG_SZ    COM10',
-            '',
-        ]];
+        $run = static function (string $command): array {
+            self::assertSame('reg query HKLM\\HARDWARE\\DEVICEMAP\\SERIALCOMM', $command);
+
+            return [0, [
+                '',
+                'HKEY_LOCAL_MACHINE\HARDWARE\DEVICEMAP\SERIALCOMM',
+                '    \Device\Serial0    REG_SZ    COM1',
+                '    \Device\USBSER000    REG_SZ    COM7',
+                '    \Device\Silabser0    REG_SZ    COM10',
+                '',
+            ]];
+        };
         $locator = new SerialPortLocator(
             static fn (): array => self::fail('glob must not run on Windows'),
             $run
@@ -73,12 +77,15 @@ final class SerialPortLocatorTest extends TestCase
     public function testDefaultsRunOnThisMachineWithoutErrors(): void
     {
         $candidates = (new SerialPortLocator())->candidates();
-        self::assertGreaterThanOrEqual(0, count($candidates));
+        $sorted = $candidates;
+        sort($sorted);
+
+        self::assertSame($sorted, $candidates, 'candidates() must be sorted');
+        self::assertSame(array_values(array_unique($candidates)), $candidates, 'candidates() must be unique');
     }
 
     private static function neverRun(): \Closure
     {
-        /** @psalm-suppress NoReturn */
         return static fn (string $command): array => self::fail("unexpected command {$command}");
     }
 }

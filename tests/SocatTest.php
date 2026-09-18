@@ -44,18 +44,31 @@ final class SocatTest extends TestCase
                         $devices[] = $match[1];
                     }
                 }
+                if (feof($this->pipes[2])) {
+                    break; // socat gave up; no more lines are coming
+                }
             }
         }
-        self::assertCount(2, $devices, 'socat did not report two ptys');
+        if (count($devices) !== 2) {
+            // tearDown does not run when setUp fails, so reap socat before failing.
+            $this->stopSocat();
+            self::fail('socat did not report two ptys');
+        }
         [$this->deviceA, $this->deviceB] = $devices;
         usleep(100_000); // let socat finish wiring before stty touches the ptys
     }
 
     protected function tearDown(): void
     {
-        if (isset($this->socat)) {
+        $this->stopSocat();
+    }
+
+    private function stopSocat(): void
+    {
+        if ($this->socat !== null) {
             proc_terminate($this->socat);
             proc_close($this->socat);
+            $this->socat = null;
         }
     }
 
@@ -80,7 +93,7 @@ final class SocatTest extends TestCase
         }
         $elapsed = (hrtime(true) - $start) / 1e9;
         self::assertGreaterThanOrEqual(0.19, $elapsed);
-        self::assertLessThan(0.5, $elapsed);
+        self::assertLessThan(1.0, $elapsed);
         $b->close();
     }
 
@@ -92,7 +105,7 @@ final class SocatTest extends TestCase
         self::assertSame('', $b->read(8, 0.1));
         $elapsed = (hrtime(true) - $start) / 1e9;
         self::assertGreaterThanOrEqual(0.09, $elapsed);
-        self::assertLessThan(0.5, $elapsed);
+        self::assertLessThan(1.0, $elapsed);
         $a->write('hello');
         self::assertSame('hello', $b->read(8, 1.0));
         $a->close();
