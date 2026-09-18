@@ -2,11 +2,11 @@
 
 Contributions are **welcome** and will be fully **credited**.
 
-We accept contributions via Pull Requests on [Github](https://github.com/sanchescom/php-wifi).
+We accept contributions via Pull Requests on [Github](https://github.com/sanchescom/php-serial).
 
 ## Pull Requests
 
-- **[PSR-2 Coding Standard](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-2-coding-style-guide.md)** - Check the code style with ``$ composer check-style`` and fix it with ``$ composer fix-style``.
+- **[PSR-12 Coding Standard](https://www.php-fig.org/psr/psr-12/)** - Check the code style with ``$ composer lint`` and fix it with ``$ composer fix``. Static analysis must pass too: ``$ composer analyse``.
 
 - **Add tests!** - Your patch won't be accepted if it doesn't have tests.
 
@@ -24,21 +24,10 @@ We accept contributions via Pull Requests on [Github](https://github.com/sanches
 
 You will need an install of [Composer](https://getcomposer.org) before continuing.
 
-First, install the dependencies:
-
 ```bash
-$ composer install
+$ composer install && composer test
 ```
 
-Then run PHPUnit:
-
-```bash
-$ vendor/bin/phpunit
-```
-
-If the test suite passes on your local machine you should be good to go.
-
-When you make a pull request, the tests will automatically be run again by [Travis CI](https://travis-ci.org/) on multiple PHP versions.
-
+The pty tests need `socat` (`brew install socat` / `apt install socat`); they are skipped when it is missing.
 
 **Happy coding**!
