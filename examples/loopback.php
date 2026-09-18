@@ -19,7 +19,11 @@ try {
     echo "Opened {$device} at {$baud}\n";
 
     $port->write("ping\n");
-    echo 'readLine: ', var_export($port->readLine(timeout: 1.0), true), "\n";
+    $line = $port->readLine(timeout: 1.0);
+    echo 'readLine: ', var_export($line, true), "\n";
+    echo $line === 'ping'
+        ? "loopback OK: 'ping' went out on TX and came back on RX\n"
+        : "loopback FAILED: got {$line}\n";
 
     try {
         $port->readLine(timeout: 0.5);
