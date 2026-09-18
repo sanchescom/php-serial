@@ -3,3 +3,4 @@
 /composer.lock
 /.drafts
 /.superpowers
+/.phpunit.result.cache

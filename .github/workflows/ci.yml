@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, '3.0.0']
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4', '8.5']
+    name: PHP ${{ matrix.php }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y socat
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+      - run: composer update --prefer-dist --no-interaction
+      - run: composer validate --strict
+      - run: composer lint
+      - run: composer analyse
+      - run: composer test
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    name: macOS / PHP 8.4
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install socat
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer update --prefer-dist --no-interaction
+      - run: composer validate --strict
+      - run: composer lint
+      - run: composer analyse
+      - run: composer test
+
+  lowest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    name: PHP 8.2 / lowest dependencies
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y socat
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - run: composer update --prefer-lowest --prefer-stable --prefer-dist --no-interaction
+      - run: composer validate --strict
+      - run: composer lint
+      - run: composer analyse
+      - run: composer test
