@@ -88,7 +88,11 @@ final class SocatTest extends TestCase
     {
         $a = new SerialPort($this->deviceA, 115200);
         $b = new SerialPort($this->deviceB, 115200);
+        $start = hrtime(true);
         self::assertSame('', $b->read(8, 0.1));
+        $elapsed = (hrtime(true) - $start) / 1e9;
+        self::assertGreaterThanOrEqual(0.09, $elapsed);
+        self::assertLessThan(0.5, $elapsed);
         $a->write('hello');
         self::assertSame('hello', $b->read(8, 1.0));
         $a->close();
