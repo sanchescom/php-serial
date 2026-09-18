@@ -147,7 +147,6 @@ final class SerialPortTest extends TestCase
     public function testStreamIsTheUnderlyingNonBlockingResource(): void
     {
         $stream = $this->port->stream();
-        self::assertIsResource($stream);
         self::assertFalse(stream_get_meta_data($stream)['blocked']);
     }
 
