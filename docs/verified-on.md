@@ -1,8 +1,8 @@
 # Verified on real hardware — 3.0.0
 
 The commands below were run over SSH on the maintainer's Raspberry Pi on
-**2026-09-18** against branch `3.0.0` at commit `b3c9f6f` (this file was added
-afterwards; no code changed). Output is pasted verbatim from `journalctl` of the
+**2026-09-18** against `develop` at commit `bdc3ce3`, which is tag `3.0.0` plus documentation and one
+extra line in `examples/loopback.php` (the `loopback OK` verdict); no library code changed. Output is pasted verbatim from `journalctl` of the
 `systemd-run` unit that executed `/tmp/pi-run.sh` as the unprivileged user `femus`.
 
 | | |
@@ -20,7 +20,7 @@ afterwards; no code changed). Output is pasted verbatim from `journalctl` of the
 ## Loopback at 9600 and 115200
 
 ```
-== 2026-09-17T10:08:26+01:00 commit b3c9f6f
+== 2026-09-17T10:31:22+01:00 commit bdc3ce3
 == Linux 6.18.34+rpt-rpi-v8 aarch64; PHP 8.4.24 (cli) (built: Jul 31 2026 05:11:11) (NTS)
 == throttled: throttled=0x50005
 == port: /dev/serial0 -> ttyS0; user femus groups: femus adm dialout cdrom sudo audio video plugdev games users netdev gpio i2c spi render input
@@ -30,12 +30,14 @@ Tests: 55, Assertions: 104, Skipped: 5.
 == php examples/loopback.php /dev/serial0 9600
 Opened /dev/serial0 at 9600
 readLine: 'ping'
+loopback OK: 'ping' went out on TX and came back on RX
 timeout: No "\n" received within 0.500 s
 readAvailable: ''
 [exit 0]
 == php examples/loopback.php /dev/serial0 115200
 Opened /dev/serial0 at 115200
 readLine: 'ping'
+loopback OK: 'ping' went out on TX and came back on RX
 timeout: No "\n" received within 0.500 s
 readAvailable: ''
 [exit 0]
@@ -45,7 +47,7 @@ speed 115200 baud; rows 0; columns 0; line = 0;
 < AT
 No answer within 2 s
 [exit 0]
-== done 2026-09-17T10:08:30+01:00
+== done 2026-09-17T10:31:27+01:00
 ```
 
 What this shows:
@@ -58,12 +60,12 @@ What this shows:
 - `examples/at-command.php` against the loopback reads back its own `AT` line and
   then reports the 2 s timeout instead of hanging.
 
-An identical run as `root` (`php-serial-run.service`, same commit, one minute
-earlier) produced the same output.
+Two earlier runs at commit `b3c9f6f` (tag `3.0.0`), one as `root` and one as `femus`, produced the
+same output minus the `loopback OK` line, which did not exist yet.
 
 ## Continuous integration
 
-GitHub Actions run `35309138350` on commit `b3c9f6f`: PHP 8.2, 8.3, 8.4, 8.5 and
+GitHub Actions run `35309138350` on commit `b3c9f6f` (tag `3.0.0`): PHP 8.2, 8.3, 8.4, 8.5 and
 `--prefer-lowest` on `ubuntu-latest` with `socat`, plus PHP 8.4 on `macos-latest`
 with `socat`; every job green, the five `SocatTest` pty cases included.
 
