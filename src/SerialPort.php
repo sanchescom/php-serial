@@ -6,6 +6,9 @@ namespace Sanchescom\Serial;
 
 final class SerialPort
 {
+    /** Seconds a write with no progress at all is retried before it is called a stall. */
+    private const WRITE_STALL_TIMEOUT = 1.0;
+
     /** @var resource|null */
     private $stream;
 
@@ -30,10 +33,7 @@ final class SerialPort
         $settings = new LineSettings($baudRate, $dataBits, $parity, $stopBits, $flowControl);
         $windows = PHP_OS_FAMILY === 'Windows';
         if ($windows) {
-            if (preg_match('/^COM\d+:?$/i', $device) !== 1) {
-                throw new \InvalidArgumentException("Windows device must look like COM3, {$device} given");
-            }
-            $device = strtoupper(rtrim($device, ':'));
+            $device = self::windowsDevice($device);
         }
 
         $stream = @fopen($windows ? '\\\\.\\' . $device : $device, 'r+b');
@@ -52,6 +52,25 @@ final class SerialPort
     }
 
     /**
+     * Normalises a Windows device name: COM3, com3: and \\.\COM3 all become COM3.
+     *
+     * @internal exposed so the Windows naming rules can be tested from any platform
+     */
+    public static function windowsDevice(string $device): string
+    {
+        $name = $device;
+        if (str_starts_with($name, '\\\\.\\')) {
+            $name = substr($name, 4);
+        }
+        $name = strtoupper(rtrim($name, ':'));
+        if (preg_match('/^COM\d+$/', $name) !== 1) {
+            throw new \InvalidArgumentException("Windows device must look like COM3, {$device} given");
+        }
+
+        return $name;
+    }
+
+    /**
      * @internal tests only: wrap an already-open non-blocking resource, no configuration.
      * @param resource $stream
      */
@@ -64,6 +83,11 @@ final class SerialPort
         return $port;
     }
 
+    /**
+     * Writes every byte, however many calls that takes.
+     *
+     * @throws SerialException when the stream makes no progress at all for WRITE_STALL_TIMEOUT seconds
+     */
     public function write(string $bytes): void
     {
         $stream = $this->stream();
@@ -72,7 +96,7 @@ final class SerialPort
             if ($written === false) {
                 throw new SerialException('Write error (device disconnected?)');
             }
-            if ($written === 0 && !$this->wait($stream, forWrite: true, timeout: 1.0)) {
+            if ($written === 0 && !$this->wait($stream, forWrite: true, timeout: self::WRITE_STALL_TIMEOUT)) {
                 throw new SerialException('Write stalled (flow control? device disconnected?)');
             }
             $bytes = substr($bytes, $written);
