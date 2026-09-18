@@ -27,6 +27,23 @@ jobs:
       - run: composer analyse
       - run: composer test
 
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    name: macOS / PHP 8.4
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install socat
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer update --prefer-dist --no-interaction
+      - run: composer validate --strict
+      - run: composer lint
+      - run: composer analyse
+      - run: composer test
+
   lowest:
     runs-on: ubuntu-latest
     timeout-minutes: 15
