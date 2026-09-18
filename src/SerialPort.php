@@ -88,7 +88,11 @@ final class SerialPort
         return $bytes;
     }
 
-    /** Up to $maxLength bytes, waiting at most $timeout seconds for the first one. Empty string on timeout. */
+    /**
+     * Up to $maxLength bytes, waiting at most $timeout seconds for the first one. Empty string on timeout.
+     *
+     * @throws SerialException when the other end has closed the port
+     */
     public function read(int $maxLength, float $timeout): string
     {
         if ($maxLength < 1) {
@@ -108,13 +112,22 @@ final class SerialPort
             return '';
         }
 
-        return (string) fread($stream, $maxLength);
+        $bytes = (string) fread($stream, $maxLength);
+        if ($bytes === '' && feof($stream)) {
+            throw new SerialException('Port closed by the other end');
+        }
+
+        return $bytes;
     }
 
     /**
      * Bytes up to (not including) $delimiter; the delimiter is consumed, later bytes stay buffered.
      *
+     * The deadline is checked before every wait, so a stream that keeps delivering bytes without the
+     * delimiter still times out. With a zero timeout only the internal buffer is inspected.
+     *
      * @throws TimeoutException when the delimiter has not arrived within $timeout seconds; partial bytes stay buffered
+     * @throws SerialException when the other end has closed the port
      */
     public function readUntil(string $delimiter, float $timeout): string
     {
@@ -134,20 +147,13 @@ final class SerialPort
                 return $head;
             }
 
-            $remaining = max(0.0, ($deadline - hrtime(true)) / 1e9);
-            if (!$this->wait($stream, forWrite: false, timeout: $remaining)) {
+            $remaining = ($deadline - hrtime(true)) / 1e9;
+            if ($remaining <= 0.0 || !$this->wait($stream, forWrite: false, timeout: $remaining)) {
                 throw new TimeoutException(sprintf('No %s received within %.3f s', json_encode($delimiter), $timeout));
             }
             $chunk = (string) fread($stream, 4096);
-            if ($chunk === '') {
-                if (feof($stream)) {
-                    throw new SerialException('Port closed by the other end');
-                }
-                if ($remaining <= 0.0) {
-                    throw new TimeoutException(
-                        sprintf('No %s received within %.3f s', json_encode($delimiter), $timeout),
-                    );
-                }
+            if ($chunk === '' && feof($stream)) {
+                throw new SerialException('Port closed by the other end');
             }
             $this->pending .= $chunk;
         }

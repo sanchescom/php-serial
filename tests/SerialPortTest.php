@@ -113,9 +113,34 @@ final class SerialPortTest extends TestCase
 
     public function testZeroTimeoutReturnsBufferedLineWithoutWaiting(): void
     {
-        $this->feed("x\n");
-        usleep(10_000);
-        self::assertSame('x', $this->port->readLine(0.0));
+        $this->feed("x\ny\n");
+        self::assertSame('x', $this->port->readLine(0.5));
+        self::assertSame('y', $this->port->readLine(0.0));
+    }
+
+    public function testReadUntilTimesOutWhileBytesKeepArrivingWithoutTheDelimiter(): void
+    {
+        // A single process, no shell: nothing survives proc_terminate(). /dev/zero never
+        // yields a "\n", so the delimiter can never arrive however much data does.
+        $process = proc_open(['head', '-c', '200000000', '/dev/zero'], [1 => ['pipe', 'w']], $pipes);
+        self::assertIsResource($process);
+        stream_set_blocking($pipes[1], false);
+        $port = SerialPort::fromStream($pipes[1]);
+
+        try {
+            $start = hrtime(true);
+            try {
+                $port->readUntil("\n", 0.2);
+                self::fail('expected TimeoutException');
+            } catch (TimeoutException) {
+            }
+            $elapsed = (hrtime(true) - $start) / 1e9;
+            self::assertGreaterThanOrEqual(0.19, $elapsed);
+            self::assertLessThan(1.0, $elapsed);
+        } finally {
+            proc_terminate($process);
+            proc_close($process);
+        }
     }
 
     public function testReadUntilThrowsWhenTheOtherEndCloses(): void
@@ -124,6 +149,14 @@ final class SerialPortTest extends TestCase
         $this->expectException(SerialException::class);
         $this->expectExceptionMessage('closed');
         $this->port->readUntil("\n", 0.5);
+    }
+
+    public function testReadThrowsWhenTheOtherEndCloses(): void
+    {
+        fclose($this->remote);
+        $this->expectException(SerialException::class);
+        $this->expectExceptionMessage('closed');
+        $this->port->read(10, 0.5);
     }
 
     public function testRejectsNegativeTimeout(): void
