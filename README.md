@@ -1,6 +1,46 @@
 # php-serial
 
-Serial port for PHP 8.2+: open, configure, write, read with a timeout. Linux, macOS, Windows. No extensions, no dependencies.
+![php-serial](.github/banner.png)
+
+[![CI](https://github.com/sanchescom/php-serial/actions/workflows/ci.yml/badge.svg)](https://github.com/sanchescom/php-serial/actions/workflows/ci.yml)
+[![Latest Version](https://img.shields.io/packagist/v/sanchescom/php-serial.svg)](https://packagist.org/packages/sanchescom/php-serial)
+[![Downloads](https://img.shields.io/packagist/dt/sanchescom/php-serial.svg)](https://packagist.org/packages/sanchescom/php-serial)
+[![PHP Version](https://img.shields.io/packagist/php-v/sanchescom/php-serial.svg)](https://packagist.org/packages/sanchescom/php-serial)
+[![License](https://img.shields.io/packagist/l/sanchescom/php-serial.svg)](LICENSE.md)
+
+Serial port for PHP 8.2+: open, configure, write, read with a timeout. Linux, macOS, Windows.
+No extensions, no dependencies.
+
+One object opens the device and applies the line settings (`stty` on Linux and macOS, `mode` on
+Windows); after that it is `write()` and `readLine(timeout: …)`. The timeout is the point: every
+read call says how long it may wait, `TimeoutException` is a real exception, and bytes that arrived
+before the deadline are kept for the next call. The suite runs on real pseudo-terminals through
+`socat`, and every release is verified on a Raspberry Pi UART before it is tagged; the transcript
+is in [`docs/verified-on.md`](docs/verified-on.md).
+
+## Loopback on a Raspberry Pi
+
+![loopback.php and at-command.php on a Raspberry Pi UART with TX wired to RX, output recorded live](.github/loopback.gif)
+
+Run over SSH on the maintainer's Pi as an unprivileged user (`femus`, member of `dialout`), GPIO14
+jumpered to GPIO15, full transcript in [`docs/verified-on.md`](docs/verified-on.md):
+
+```
+$ php examples/loopback.php /dev/serial0 115200
+Opened /dev/serial0 at 115200
+readLine: 'ping'
+timeout: No "\n" received within 0.500 s
+readAvailable: ''
+[exit 0]
+
+$ php examples/at-command.php /dev/serial0 115200
+< AT
+No answer within 2 s
+[exit 0]
+```
+
+The second run shows what a timeout looks like against a device that never answers: the loopback
+echoes `AT` back, then `readLine(timeout: 2.0)` throws after two seconds instead of hanging.
 
 ## Install
 
