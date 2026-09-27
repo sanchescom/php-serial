@@ -103,10 +103,16 @@ final class SerialPort
         }
     }
 
-    /** Everything received so far. Never waits. */
+    /**
+     * Everything received so far. Never waits, never throws: an empty string with
+     * feof($port->stream()) true means the port is gone.
+     */
     public function readAvailable(): string
     {
-        $bytes = $this->pending . (string) stream_get_contents($this->stream());
+        // @: once the device vanishes (a USB adapter pulled out) every read fails with a notice,
+        // "Device not configured", many thousand a second under an event loop. The stream is at
+        // EOF by then, which is how the caller is meant to find out.
+        $bytes = $this->pending . (string) @stream_get_contents($this->stream());
         $this->pending = '';
 
         return $bytes;

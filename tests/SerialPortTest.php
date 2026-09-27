@@ -186,6 +186,16 @@ final class SerialPortTest extends TestCase
         $this->port->read(10, 0.5);
     }
 
+    public function testReadAvailableHandsOutTheTailThenReportsTheClosedPortThroughEof(): void
+    {
+        $this->feed('last words');
+        fclose($this->remote);
+
+        self::assertSame('last words', $this->port->readAvailable());
+        self::assertSame('', $this->port->readAvailable());
+        self::assertTrue(feof($this->port->stream()));
+    }
+
     public function testRejectsNegativeTimeout(): void
     {
         $this->expectException(\InvalidArgumentException::class);
