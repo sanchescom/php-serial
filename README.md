@@ -150,7 +150,8 @@ an `\InvalidArgumentException`.
   all for one second — flow control asserted, device unplugged — it gives up with a `SerialException`.
 - If the other end closes the port while `read()`, `readUntil()` or `readLine()` is waiting, it throws
   a `SerialException` rather than returning an empty string or a `TimeoutException`. `readAvailable()`
-  does not throw: check `feof($port->stream())` when you need to see that the port is gone.
+  does not throw: check `feof($port->stream())` when you need to see that the port is gone. It stays
+  quiet about it too — a pulled USB adapter used to cost a PHP notice on every call.
 - A zero timeout polls the device once and never waits: whatever has already arrived is used, and
   `readUntil()` and `readLine()` throw a `TimeoutException` straight away when the delimiter is not
   there yet.
