@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.2 — 2026-10-05
+
+- No code changes. The 3.0.0 and 3.0.1 tags were re-created on rewritten commits, and Packagist
+  keeps the old references for them; this release gives the same code a reference that exists.
+
 ## 3.0.1 — 2026-09-26
 
 - `readAvailable()` no longer raises a PHP notice ("Device not configured") on every call once the
